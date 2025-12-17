@@ -1,34 +1,53 @@
-import { Link, Outlet, useLocation } from 'react-router-dom';
+import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { LayoutDashboard, ShoppingCart, Package, Users, LogOut } from 'lucide-react';
-import clsx from 'clsx'; // Ajuda a combinar classes condicionalmente
+import clsx from 'clsx';
 
 export function MainLayout() {
   const location = useLocation();
+  const navigate = useNavigate();
 
-  // Lista de links do menu
+  // Ler o usuário salvo para saber se é ADMIN
+  const userJson = localStorage.getItem('condostock_user');
+  const user = userJson ? JSON.parse(userJson) : { role: 'RESIDENT' };
+  const isAdmin = user.role === 'ADMIN';
+
+  // Define os menus
   const menuItems = [
+    // Todo mundo vê
     { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
-    { icon: ShoppingCart, label: 'Nova Venda', path: '/sales' },
-    { icon: Package, label: 'Produtos', path: '/products' },
-    { icon: Users, label: 'Moradores', path: '/residents' },
+    { icon: ShoppingCart, label: isAdmin ? 'Caixa / Vendas' : 'Fazer Compras', path: '/sales' },
   ];
+
+  // Só adiciona esses se for ADMIN
+  if (isAdmin) {
+    menuItems.push(
+      { icon: Package, label: 'Produtos', path: '/products' },
+      { icon: Users, label: 'Moradores', path: '/residents' }
+    );
+  }
+
+  function handleLogout() {
+    localStorage.removeItem('condostock_token');
+    localStorage.removeItem('condostock_user');
+    navigate('/login');
+  }
 
   return (
     <div className="flex min-h-screen bg-slate-50">
-      {/* --- SIDEBAR (Lateral Esquerda) --- */}
-      <aside className="w-64 bg-slate-900 text-white flex flex-col fixed h-full shadow-xl">
+      <aside className="w-64 bg-slate-900 text-white flex flex-col fixed h-full shadow-xl transition-all z-20">
         <div className="p-6 border-b border-slate-800">
           <h1 className="text-2xl font-bold text-blue-400 flex items-center gap-2">
             <LayoutDashboard />
             CondoStock
           </h1>
-          <p className="text-xs text-slate-400 mt-1">Gestão Inteligente</p>
+          <p className="text-xs text-slate-400 mt-1">
+            {isAdmin ? 'Gestão Administrativa' : 'Área do Morador'}
+          </p>
         </div>
 
         <nav className="flex-1 p-4 space-y-2">
           {menuItems.map((item) => {
             const Icon = item.icon;
-            // Verifica se este é o link ativo
             const isActive = location.pathname === item.path;
 
             return (
@@ -38,8 +57,8 @@ export function MainLayout() {
                 className={clsx(
                   'flex items-center gap-3 px-4 py-3 rounded-lg transition-all',
                   isActive 
-                    ? 'bg-blue-600 text-white shadow-md' // Estilo do Ativo
-                    : 'text-slate-300 hover:bg-slate-800 hover:text-white' // Estilo Padrão
+                    ? 'bg-blue-600 text-white shadow-md' 
+                    : 'text-slate-300 hover:bg-slate-800 hover:text-white'
                 )}
               >
                 <Icon size={20} />
@@ -50,16 +69,22 @@ export function MainLayout() {
         </nav>
 
         <div className="p-4 border-t border-slate-800">
-          <button className="flex items-center gap-3 px-4 py-3 w-full text-red-400 hover:bg-slate-800 rounded-lg transition-all">
+          <div className="mb-4 px-2">
+            <p className="text-xs text-slate-500 uppercase font-bold mb-1">Usuário</p>
+            <p className="text-sm font-medium text-slate-300 truncate">{user.name}</p>
+            <p className="text-xs text-slate-500 truncate">{user.email}</p>
+          </div>
+          <button 
+            onClick={handleLogout}
+            className="flex items-center gap-3 px-4 py-3 w-full text-red-400 hover:bg-slate-800 rounded-lg transition-all"
+          >
             <LogOut size={20} />
             <span className="font-medium">Sair</span>
           </button>
         </div>
       </aside>
 
-      {/* --- CONTEÚDO PRINCIPAL (Direita) --- */}
       <main className="flex-1 ml-64 p-8">
-        {/* O 'Outlet' é onde as páginas (Dashboard, Vendas, etc) serão renderizadas */}
         <Outlet />
       </main>
     </div>
